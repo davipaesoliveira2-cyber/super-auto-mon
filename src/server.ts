@@ -25,6 +25,24 @@ fastify.get('/health', async () => {
   return { status: 'ok' };
 });
 
+function dispatchBattle(
+  playerAId: string,
+  playerBId: string,
+  _round: number,
+  teamA: (import('./utils/pokemon-generator').PokemonInstance | null)[],
+  teamB: (import('./utils/pokemon-generator').PokemonInstance | null)[],
+  nameA: string,
+  nameB: string
+): { result: BattleResult; winnerId: string; loserId: string } {
+  const result = runBattle(teamA, teamB, nameA, nameB);
+  const aWon = result.winner === 'p1';
+  return {
+    result,
+    winnerId: aWon ? playerAId : playerBId,
+    loserId: aWon ? playerBId : playerAId
+  };
+}
+
 const start = async () => {
   try {
     await initDb();
