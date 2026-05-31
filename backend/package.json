@@ -1,0 +1,23 @@
+{
+  "name": "super-auto-mon-backend",
+  "version": "1.0.0",
+  "description": "Backend for Super Auto Mon",
+  "main": "dist/server.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "dev": "ts-node-dev --respawn --transpile-only src/server.ts"
+  },
+  "dependencies": {
+    "@pkmn/sim": "^0.10.9",
+    "sql.js": "^1.11.0",
+    "fastify": "^4.26.2",
+    "socket.io": "^4.7.5"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/node": "^20.11.24",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.3.3"
+  }
+}

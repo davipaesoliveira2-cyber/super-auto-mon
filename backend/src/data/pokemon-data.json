@@ -1,0 +1,35 @@
+{
+  "bulbasaur": { "tier": 1, "evolveCopies": 2, "evolvesInto": "ivysaur" },
+  "charmander": { "tier": 1, "evolveCopies": 2, "evolvesInto": "charmeleon" },
+  "squirtle": { "tier": 1, "evolveCopies": 2, "evolvesInto": "wartortle" },
+  "caterpie": { "tier": 1, "evolveCopies": 2, "evolvesInto": "metapod" },
+  "weedle": { "tier": 1, "evolveCopies": 2, "evolvesInto": "kakuna" },
+  "pidgey": { "tier": 1, "evolveCopies": 2, "evolvesInto": "pidgeotto" },
+  "rattata": { "tier": 1, "evolveCopies": 2, "evolvesInto": "raticate" },
+  "magikarp": { "tier": 1, "evolveCopies": 5, "evolvesInto": "gyarados" },
+  
+  "pikachu": { "tier": 2, "evolveCopies": 2, "evolvesInto": "raichu" },
+  "growlithe": { "tier": 2, "evolveCopies": 2, "evolvesInto": "arcanine" },
+  "sandshrew": { "tier": 2, "evolveCopies": 2, "evolvesInto": "sandslash" },
+  "oddish": { "tier": 2, "evolveCopies": 2, "evolvesInto": "gloom" },
+  "bellsprout": { "tier": 2, "evolveCopies": 2, "evolvesInto": "weepinbell" },
+  "meowth": { "tier": 2, "evolveCopies": 2, "evolvesInto": "persian" },
+  
+  "abra": { "tier": 3, "evolveCopies": 2, "evolvesInto": "kadabra" },
+  "gastly": { "tier": 3, "evolveCopies": 2, "evolvesInto": "haunter" },
+  "machop": { "tier": 3, "evolveCopies": 2, "evolvesInto": "machoke" },
+  "geodude": { "tier": 3, "evolveCopies": 2, "evolvesInto": "graveler" },
+  "eevee": { "tier": 3, "evolveCopies": 3, "evolvesInto": "vaporeon" },
+  
+  "dratini": { "tier": 4, "evolveCopies": 3, "evolvesInto": "dragonair" },
+  "ponyta": { "tier": 4, "evolveCopies": 2, "evolvesInto": "rapidash" },
+  "rhyhorn": { "tier": 4, "evolveCopies": 2, "evolvesInto": "rhydon" },
+  "magnemite": { "tier": 4, "evolveCopies": 2, "evolvesInto": "magneton" },
+  
+  "scyther": { "tier": 5, "evolveCopies": 3, "evolvesInto": "scizor" },
+  "lapras": { "tier": 5, "evolveCopies": 3, "evolvesInto": "lapras" },
+  "snorlax": { "tier": 5, "evolveCopies": 3, "evolvesInto": "snorlax" },
+  "tangela": { "tier": 5, "evolveCopies": 2, "evolvesInto": "tangrowth" },
+  
+  "mew": { "tier": 6, "evolveCopies": 3, "evolvesInto": "mew" }
+}
