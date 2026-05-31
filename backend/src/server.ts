@@ -21,23 +21,9 @@ fastify.addHook('onRequest', (request, reply, done) => {
   done();
 });
 
-function dispatchBattle(
-  playerAId: string,
-  playerBId: string,
-  round: number,
-  teamA: (import('./utils/pokemon-generator').PokemonInstance | null)[],
-  teamB: (import('./utils/pokemon-generator').PokemonInstance | null)[],
-  nameA: string,
-  nameB: string
-): { result: BattleResult; winnerId: string; loserId: string } {
-  const result = runBattle(teamA, teamB, nameA, nameB);
-  const aWon = result.winner === 'p1';
-  return {
-    result,
-    winnerId: aWon ? playerAId : playerBId,
-    loserId: aWon ? playerBId : playerAId
-  };
-}
+fastify.get('/health', async () => {
+  return { status: 'ok' };
+});
 
 const start = async () => {
   try {
@@ -128,10 +114,10 @@ const start = async () => {
         const myTeam = st.team;
 
         // 1. Salvar time no banco
-        matchmaker.saveTeam(pid, st.playerName, round, myTeam);
+        await matchmaker.saveTeamDb(pid, st.playerName, round, myTeam);
 
         // 2. Procurar oponente real
-        const opp = matchmaker.findOpponentInDb(pid, round);
+        const opp = await matchmaker.findOpponentInDb(pid, round);
 
         if (opp) {
           // --- MATCH ENCONTRADO: notificar AMBOS os jogadores ---
@@ -139,11 +125,10 @@ const start = async () => {
 
           const { result } = dispatchBattle(pid, opp.playerId, round, myTeam, opp.team, st.playerName, opp.name);
 
-          // Avançar estado do jogador atual
           const won = result.winner === 'p1';
           await g.nextRound(won);
-          matchmaker.removeTeam(pid, round);
-          matchmaker.removeTeam(opp.playerId, round);
+          await matchmaker.removeTeamDb(pid, round);
+          await matchmaker.removeTeamDb(opp.playerId, round);
 
           socket.emit('battleResult', {
             winner: result.winner,
@@ -153,14 +138,12 @@ const start = async () => {
           });
           socket.emit('state', g.getState());
 
-          // Notificar o oponente (jogador A) que estava esperando
           const oppSocket = playerSockets.get(opp.playerId);
           const oppGM = activeSessions.get(opp.playerId);
           if (oppSocket && oppGM) {
-            // Para o oponente, 'p1' é ele mesmo, 'p2' é o jogador atual
             const oppWon = result.winner === 'p2';
             await oppGM.nextRound(oppWon);
-            matchmaker.removeTeam(opp.playerId, round);
+            await matchmaker.removeTeamDb(opp.playerId, round);
 
             oppSocket.emit('battleResult', {
               winner: oppWon ? 'p1' : result.winner === 'draw' ? 'draw' : 'p2',
@@ -171,16 +154,14 @@ const start = async () => {
             oppSocket.emit('state', oppGM.getState());
           }
         } else {
-          // --- AGUARDANDO OPONENTE ---
           socket.emit('waitingOpponent', { round });
           console.log(`Player ${pid} waiting in round ${round}`);
 
-          // Timeout de 20s para fallback com IA
           const timeout = setTimeout(async () => {
             waitingTimeouts.delete(pid);
-            const stillWaiting = matchmaker.findOpponentInDb(pid, round);
+            const stillWaiting = await matchmaker.findOpponentInDb(pid, round);
             if (stillWaiting) {
-              matchmaker.removeTeam(pid, round);
+              await matchmaker.removeTeamDb(pid, round);
               const aiTeam = await matchmaker.generateFallbackTeam(round);
               const fbResult = runBattle(myTeam, aiTeam, st.playerName, `Treinador da Rodada ${round}`);
               const fbWon = fbResult.winner === 'p1';
@@ -201,7 +182,7 @@ const start = async () => {
 
       socket.on('resetGame', async () => {
         const cur = getGM().getState();
-        matchmaker.removeTeam(pid, cur.round);
+        await matchmaker.removeTeamDb(pid, cur.round);
 
         const shortId = pid.substring(pid.length - 4);
         const newGm = new GameManager(pid, `Jogador_${shortId}`);
@@ -210,17 +191,17 @@ const start = async () => {
         socket.emit('state', newGm.getState());
       });
 
-      socket.on('cancelWait', () => {
+      socket.on('cancelWait', async () => {
         const t = waitingTimeouts.get(pid);
         if (t) {
           clearTimeout(t);
           waitingTimeouts.delete(pid);
         }
-        matchmaker.removeTeam(pid, getGM().getState().round);
+        await matchmaker.removeTeamDb(pid, getGM().getState().round);
         socket.emit('state', getGM().getState());
       });
 
-      socket.on('disconnect', () => {
+      socket.on('disconnect', async () => {
         console.log(`Client disconnected: ${socket.id}`);
         playerSockets.delete(pid);
         const t = waitingTimeouts.get(pid);
@@ -230,7 +211,7 @@ const start = async () => {
         }
         const cur = activeSessions.get(pid);
         if (cur) {
-          matchmaker.removeTeam(pid, cur.getState().round);
+          await matchmaker.removeTeamDb(pid, cur.getState().round);
         }
         activeSessions.delete(pid);
       });

@@ -9,12 +9,12 @@ export interface Opponent {
 }
 
 class Matchmaker {
-  saveTeam(playerId: string, playerName: string, round: number, team: (PokemonInstance | null)[]): void {
-    saveTeam(playerId, playerName, round, JSON.stringify(team));
+  async saveTeamDb(playerId: string, playerName: string, round: number, team: (PokemonInstance | null)[]): Promise<void> {
+    await saveTeam(playerId, playerName, round, JSON.stringify(team));
   }
 
-  findOpponentInDb(playerId: string, round: number): Opponent | null {
-    const row = findOpponent(playerId, round);
+  async findOpponentInDb(playerId: string, round: number): Promise<Opponent | null> {
+    const row = await findOpponent(playerId, round);
     if (!row) return null;
     try {
       const team: (PokemonInstance | null)[] = JSON.parse(row.team_data);
@@ -24,8 +24,8 @@ class Matchmaker {
     }
   }
 
-  removeTeam(playerId: string, round: number): void {
-    removeTeam(playerId, round);
+  async removeTeamDb(playerId: string, round: number): Promise<void> {
+    await removeTeam(playerId, round);
   }
 
   async generateFallbackTeam(round: number): Promise<(PokemonInstance | null)[]> {

@@ -1,65 +1,56 @@
-import initSqlJs, { Database as SqlJsDatabase } from 'sql.js';
-import fs from 'fs';
-import path from 'path';
+import { Pool } from 'pg';
 
-const DB_PATH = process.env.DB_PATH || path.join(__dirname, '..', 'data', 'saved-teams.db');
+let pool: Pool | null = null;
 
-let db: SqlJsDatabase | null = null;
+const DATABASE_URL = process.env.DATABASE_URL;
 
-export async function initDb(): Promise<SqlJsDatabase> {
-  if (db) return db;
+export async function initDb(): Promise<Pool> {
+  if (pool) return pool;
 
-  const SQL = await initSqlJs();
-
-  // Tentar carregar banco existente do disco
-  const dbDir = path.dirname(DB_PATH);
-  if (!fs.existsSync(dbDir)) {
-    fs.mkdirSync(dbDir, { recursive: true });
+  if (!DATABASE_URL) {
+    throw new Error('DATABASE_URL environment variable is required. Get one at https://supabase.com');
   }
 
-  if (fs.existsSync(DB_PATH)) {
-    const buffer = fs.readFileSync(DB_PATH);
-    db = new SQL.Database(buffer);
-  } else {
-    db = new SQL.Database();
+  pool = new Pool({ connectionString: DATABASE_URL });
+
+  // Testar conexão
+  const client = await pool.connect();
+  try {
+    await client.query('SELECT 1');
+    console.log('Database connected.');
+  } finally {
+    client.release();
   }
 
-  db.run(`
+  // Criar tabela se não existir
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS saved_teams (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       player_id TEXT NOT NULL,
       player_name TEXT NOT NULL,
       round INTEGER NOT NULL,
       team_data TEXT NOT NULL,
-      created_at TEXT DEFAULT (datetime('now')),
+      created_at TIMESTAMP DEFAULT NOW(),
       UNIQUE(player_id, round)
     )
   `);
 
-  persistDb();
-  return db;
+  return pool;
 }
 
-function persistDb(): void {
-  if (!db) return;
-  const data = db.export();
-  const buffer = Buffer.from(data);
-  fs.writeFileSync(DB_PATH, buffer);
+export function getPool(): Pool {
+  if (!pool) throw new Error('Database not initialized. Call initDb() first.');
+  return pool;
 }
 
-export function getDb(): SqlJsDatabase {
-  if (!db) throw new Error('Database not initialized. Call initDb() first.');
-  return db;
-}
-
-export function saveTeam(playerId: string, playerName: string, round: number, teamData: string): void {
-  const d = getDb();
-  d.run(
-    `INSERT OR REPLACE INTO saved_teams (player_id, player_name, round, team_data)
-     VALUES (?, ?, ?, ?)`,
+export async function saveTeam(playerId: string, playerName: string, round: number, teamData: string): Promise<void> {
+  const p = getPool();
+  await p.query(
+    `INSERT INTO saved_teams (player_id, player_name, round, team_data)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (player_id, round) DO UPDATE SET team_data = $4, player_name = $2, created_at = NOW()`,
     [playerId, playerName, round, teamData]
   );
-  persistDb();
 }
 
 export interface OpponentRow {
@@ -68,27 +59,23 @@ export interface OpponentRow {
   team_data: string;
 }
 
-export function findOpponent(playerId: string, round: number): OpponentRow | null {
-  const d = getDb();
-  const stmt = d.prepare(`
-    SELECT player_id, player_name, team_data
-    FROM saved_teams
-    WHERE round = ? AND player_id != ?
-    ORDER BY created_at ASC
-    LIMIT 1
-  `);
-  stmt.bind([round, playerId]);
-  if (stmt.step()) {
-    const row = stmt.getAsObject() as OpponentRow;
-    stmt.free();
-    return row;
-  }
-  stmt.free();
-  return null;
+export async function findOpponent(playerId: string, round: number): Promise<OpponentRow | null> {
+  const p = getPool();
+  const result = await p.query(
+    `SELECT player_id, player_name, team_data
+     FROM saved_teams
+     WHERE round = $1 AND player_id != $2
+     ORDER BY created_at ASC
+     LIMIT 1`,
+    [round, playerId]
+  );
+  return result.rows[0] || null;
 }
 
-export function removeTeam(playerId: string, round: number): void {
-  const d = getDb();
-  d.run(`DELETE FROM saved_teams WHERE player_id = ? AND round = ?`, [playerId, round]);
-  persistDb();
+export async function removeTeam(playerId: string, round: number): Promise<void> {
+  const p = getPool();
+  await p.query(
+    `DELETE FROM saved_teams WHERE player_id = $1 AND round = $2`,
+    [playerId, round]
+  );
 }
