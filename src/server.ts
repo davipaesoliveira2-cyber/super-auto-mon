@@ -138,7 +138,7 @@ const start = async () => {
         const opp = await matchmaker.findOpponentInDb(pid, round);
 
         if (opp) {
-          // --- MATCH ENCONTRADO: notificar AMBOS os jogadores ---
+          // --- MATCH ENCONTRADO ---
           console.log(`Match found round ${round}: ${pid} vs ${opp.playerId}`);
 
           const { result } = dispatchBattle(pid, opp.playerId, round, myTeam, opp.team, st.playerName, opp.name);
@@ -146,7 +146,6 @@ const start = async () => {
           const won = result.winner === 'p1';
           await g.nextRound(won);
           await matchmaker.removeTeamDb(pid, round);
-          await matchmaker.removeTeamDb(opp.playerId, round);
 
           socket.emit('battleResult', {
             winner: result.winner,
@@ -161,7 +160,6 @@ const start = async () => {
           if (oppSocket && oppGM) {
             const oppWon = result.winner === 'p2';
             await oppGM.nextRound(oppWon);
-            await matchmaker.removeTeamDb(opp.playerId, round);
 
             oppSocket.emit('battleResult', {
               winner: oppWon ? 'p1' : result.winner === 'draw' ? 'draw' : 'p2',
@@ -170,6 +168,9 @@ const start = async () => {
               opponentTeam: myTeam
             });
             oppSocket.emit('state', oppGM.getState());
+
+            const oppT = waitingTimeouts.get(opp.playerId);
+            if (oppT) { clearTimeout(oppT); waitingTimeouts.delete(opp.playerId); }
           }
         } else {
           socket.emit('waitingOpponent', { round });
@@ -177,8 +178,42 @@ const start = async () => {
 
           const timeout = setTimeout(async () => {
             waitingTimeouts.delete(pid);
-            const stillWaiting = await matchmaker.findOpponentInDb(pid, round);
-            if (stillWaiting) {
+
+            if (getGM().getState().round !== round) return;
+
+            const found = await matchmaker.findOpponentInDb(pid, round);
+            if (found) {
+              console.log(`Timeout real match ${pid} vs ${found.playerId} round ${round}`);
+              const { result } = dispatchBattle(pid, found.playerId, round, myTeam, found.team, st.playerName, found.name);
+              const won = result.winner === 'p1';
+              await g.nextRound(won);
+              await matchmaker.removeTeamDb(pid, round);
+
+              socket.emit('battleResult', {
+                winner: result.winner,
+                log: result.log,
+                opponentName: found.name,
+                opponentTeam: found.team
+              });
+              socket.emit('state', g.getState());
+
+              const fOppSocket = playerSockets.get(found.playerId);
+              const fOppGM = activeSessions.get(found.playerId);
+              if (fOppSocket && fOppGM) {
+                const fOppWon = result.winner === 'p2';
+                await fOppGM.nextRound(fOppWon);
+                fOppSocket.emit('battleResult', {
+                  winner: fOppWon ? 'p1' : result.winner === 'draw' ? 'draw' : 'p2',
+                  log: result.log,
+                  opponentName: st.playerName,
+                  opponentTeam: myTeam
+                });
+                fOppSocket.emit('state', fOppGM.getState());
+                const ft = waitingTimeouts.get(found.playerId);
+                if (ft) { clearTimeout(ft); waitingTimeouts.delete(found.playerId); }
+              }
+            } else {
+              console.log(`AI fallback for ${pid} round ${round}`);
               await matchmaker.removeTeamDb(pid, round);
               const aiTeam = await matchmaker.generateFallbackTeam(round);
               const fbResult = runBattle(myTeam, aiTeam, st.playerName, `Treinador da Rodada ${round}`);
