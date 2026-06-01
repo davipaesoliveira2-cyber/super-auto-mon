@@ -43,9 +43,7 @@ export const AuthView: React.FC = () => {
             Compre Pokémon, equipe itens e evolua suas criaturas a cada rodada.
           </p>
           <div className="flex justify-center gap-3 text-[10px] text-slate-500">
-            <span>⚔️ VS Jogadores</span>
-            <span>🤖 VS IA</span>
-            <span>🔄 Matchmaking</span>
+
           </div>
           <div className="mt-3 bg-pokemon-yellow/10 border border-pokemon-yellow/20 rounded-xl px-3 py-2">
             <p className="text-[10px] text-pokemon-yellow/80">
