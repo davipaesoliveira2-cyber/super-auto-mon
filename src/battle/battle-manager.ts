@@ -177,6 +177,15 @@ function chooseBestMove(battle: Battle, playerId: 'p1' | 'p2'): string {
     const moveData = Dex.moves.get(moveSlot.id);
     let score = 0;
 
+    // Fake Out só funciona no primeiro turno após entrar em campo
+    if (moveData.id === 'fakeout') {
+      const activeTurns = (activePokemon as any).activeTurns;
+      if (activeTurns !== undefined && activeTurns > 0) {
+        score = -9999;
+        continue;
+      }
+    }
+
     // Golpes que dão dano direto
     if (moveData.category !== 'Status') {
       const basePower = moveData.basePower || 40;

@@ -209,6 +209,18 @@ function pickMoves(movesPool: string[]): string[] {
   return selected;
 }
 
+function boostIvs(ivs: PokemonInstance['ivs']): PokemonInstance['ivs'] {
+  const cap = (v: number) => Math.min(31, v + 1);
+  return {
+    hp: cap(ivs.hp),
+    atk: cap(ivs.atk),
+    def: cap(ivs.def),
+    spa: cap(ivs.spa),
+    spd: cap(ivs.spd),
+    spe: cap(ivs.spe),
+  };
+}
+
 export async function evolvePokemon(target: PokemonInstance, source: PokemonInstance, evolveConfig: Record<string, any>): Promise<PokemonInstance> {
   if (!isInSameEvolutionLine(target.species, source.species, evolveConfig)) {
     return target;
@@ -227,12 +239,14 @@ export async function evolvePokemon(target: PokemonInstance, source: PokemonInst
       species: nextSpeciesId,
       name: nextSpecies.name,
       moves,
-      copies: 1
+      copies: 1,
+      ivs: boostIvs(target.ivs)
     };
   }
 
   return {
     ...target,
-    copies: totalCopies
+    copies: totalCopies,
+    ivs: boostIvs(target.ivs)
   };
 }

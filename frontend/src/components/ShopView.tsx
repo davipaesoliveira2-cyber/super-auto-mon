@@ -3,6 +3,23 @@ import { useGameStore, ShopItem } from '../store/useGameStore';
 import pokemonData from '../data/pokemon-data.json';
 import { Heart, Trophy, Coins, RotateCw, Snowflake, Shield, Swords, Trash2, ShieldAlert } from 'lucide-react';
 
+const ITEM_NAMES: Record<string, string> = {
+  leftovers: 'Leftovers',
+  berry: 'Oran Berry',
+  goldberry: 'Gold Berry',
+  quickclaw: 'Quick Claw',
+  kingsrock: "King's Rock",
+  focusband: 'Focus Band',
+  choiceband: 'Choice Band',
+  mysticwater: 'Mystic Water',
+  charcoal: 'Charcoal',
+  miracleseed: 'Miracle Seed',
+};
+
+function itemDisplayName(id: string): string {
+  return ITEM_NAMES[id] || id;
+}
+
 export const ShopView: React.FC = () => {
   const {
     gameState,
@@ -163,15 +180,10 @@ export const ShopView: React.FC = () => {
                   <>
                     {/* Item Equipped */}
                     {pokemon.item && (
-                      <div className="absolute top-2 right-2 bg-slate-950/80 p-1 rounded-lg border border-slate-800 shadow flex items-center justify-center" title={`Equipado: ${pokemon.item}`}>
-                        <img
-                          src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/${pokemon.item}.png`}
-                          alt={pokemon.item}
-                          className="w-5 h-5"
-                          onError={(e) => {
-                            (e.target as HTMLElement).style.display = 'none';
-                          }}
-                        />
+                      <div className="absolute top-2 right-2 bg-slate-950/80 p-1 rounded-lg border border-slate-800 shadow flex items-center justify-center" title={`Equipado: ${itemDisplayName(pokemon.item)}`}>
+                        <span className="text-[8px] text-slate-300 font-bold px-0.5 leading-none">
+                          {itemDisplayName(pokemon.item)}
+                        </span>
                       </div>
                     )}
 
@@ -319,17 +331,17 @@ export const ShopView: React.FC = () => {
                 ) : (
                   <>
                     {/* Item representation */}
-                    <div className="flex-1 flex items-center justify-center my-4 min-h-[80px]">
-                      <img
-                        src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/${item.itemName}.png`}
-                        alt={item.itemName}
-                        className="w-12 h-12 object-contain drop-shadow-md"
-                      />
+                    <div className="flex-1 flex flex-col items-center justify-center my-4 min-h-[80px]">
+                      <div className="w-12 h-12 rounded-xl bg-slate-800/50 border border-slate-700 flex items-center justify-center mb-2">
+                        <span className="text-[10px] text-pokemon-yellow font-bold text-center leading-tight px-1">
+                          {item.itemName && itemDisplayName(item.itemName)}
+                        </span>
+                      </div>
                     </div>
 
                     <div className="text-center w-full">
                       <div className="font-extrabold text-sm text-white capitalize leading-tight">
-                        {item.itemName?.replace('berry', ' Berry')}
+                        {item.itemName && itemDisplayName(item.itemName)}
                       </div>
                       <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">
                         Item Equipável
