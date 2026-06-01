@@ -175,28 +175,38 @@ function pickMoves(movesPool: string[]): string[] {
     return ['tackle'];
   }
 
-  let selectedMoves: string[] = [];
-  let attempts = 0;
-  while (attempts < 50) {
-    const tempMoves: string[] = [];
-    const poolCopy = [...movesPool];
-    const count = Math.min(4, poolCopy.length);
-    for (let i = 0; i < count; i++) {
-      const idx = Math.floor(Math.random() * poolCopy.length);
-      tempMoves.push(poolCopy.splice(idx, 1)[0]);
-    }
-    const hasOffensive = tempMoves.some(moveId => {
-      const move = Dex.moves.get(moveId);
-      return move.category !== 'Status' && (move.basePower > 0 || move.damage || move.damageCallback);
-    });
-    if (hasOffensive || poolCopy.length === 0) {
-      selectedMoves = tempMoves;
-      break;
-    }
-    attempts++;
+  const isOffensive = (moveId: string): boolean => {
+    const move = Dex.moves.get(moveId);
+    return move.category !== 'Status' && (move.basePower > 0 || !!move.damage || !!move.damageCallback);
+  };
+
+  const offensive = movesPool.filter(isOffensive);
+  const status = movesPool.filter(m => !isOffensive(m));
+
+  if (offensive.length === 0) {
+    const moves = movesPool.slice(0, 3);
+    moves.push('tackle');
+    return moves;
   }
 
-  return selectedMoves.length > 0 ? selectedMoves : movesPool.slice(0, 4);
+  if (movesPool.length <= 4) {
+    return [...movesPool];
+  }
+
+  const selected: string[] = [];
+
+  const offCopy = [...offensive];
+  const pickOff = offCopy.splice(Math.floor(Math.random() * offCopy.length), 1)[0];
+  selected.push(pickOff);
+
+  const remaining = [...offCopy, ...status];
+  const slotsLeft = Math.min(3, remaining.length);
+  for (let i = 0; i < slotsLeft; i++) {
+    const idx = Math.floor(Math.random() * remaining.length);
+    selected.push(remaining.splice(idx, 1)[0]);
+  }
+
+  return selected;
 }
 
 export async function evolvePokemon(target: PokemonInstance, source: PokemonInstance, evolveConfig: Record<string, any>): Promise<PokemonInstance> {
@@ -217,7 +227,7 @@ export async function evolvePokemon(target: PokemonInstance, source: PokemonInst
       species: nextSpeciesId,
       name: nextSpecies.name,
       moves,
-      copies: totalCopies
+      copies: 1
     };
   }
 
