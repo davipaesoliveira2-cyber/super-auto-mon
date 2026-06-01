@@ -157,6 +157,8 @@ const start = async () => {
 
       const getGM = (): GameManager => activeSessions.get(pid) ?? gm;
 
+      socket.emit('state', getGM().getState());
+
       socket.emit('state', gm.getState());
 
       socket.on('reroll', async () => {
@@ -255,7 +257,10 @@ const start = async () => {
             if (oppT) { clearTimeout(oppT); waitingTimeouts.delete(opp.playerId); }
           }
         } else {
-          socket.emit('waitingOpponent', { round });
+          const INITIAL_WAIT_MS = 5000;
+          const CHOICE_TIMEOUT_MS = 7500;
+
+          socket.emit('waitingOpponent', { round, timeoutMs: INITIAL_WAIT_MS });
           console.log(`Player ${pid} waiting in round ${round}`);
 
           const timeout = setTimeout(async () => {
@@ -296,7 +301,7 @@ const start = async () => {
               }
             } else {
               console.log(`Asking ${pid} for fight choice round ${round}`);
-              socket.emit('waitingChoice', { round });
+              socket.emit('waitingChoice', { round, timeoutMs: CHOICE_TIMEOUT_MS });
 
               const choiceHandler = async (choice: { action: 'ai' | 'ghost' | 'wait' }) => {
                 socket.off('fightChoice', choiceHandler);
@@ -304,6 +309,7 @@ const start = async () => {
                 if (ft) { clearTimeout(ft); choiceFallbackTimers.delete(pid); }
 
                 if (choice.action === 'wait') {
+                  socket.emit('waitTimerUpdate', { timeoutMs: CHOICE_TIMEOUT_MS });
                   const newTimeout = setTimeout(async () => {
                     waitingTimeouts.delete(pid);
                     if (getGM().getState().round !== round) return;
@@ -317,7 +323,7 @@ const start = async () => {
                       opponentName: `Treinador da Rodada ${round}`, opponentTeam: aiTeam
                     });
                     socket.emit('state', g.getState());
-                  }, 15000);
+                  }, CHOICE_TIMEOUT_MS);
                   waitingTimeouts.set(pid, newTimeout);
                   return;
                 }
@@ -356,10 +362,10 @@ const start = async () => {
                   console.log(`Choice default AI for ${pid} round ${round}`);
                   socket.emit('clearChoice');
                 }
-              }, 15000);
+              }, CHOICE_TIMEOUT_MS);
               choiceFallbackTimers.set(pid, fallback);
             }
-          }, 10000);
+          }, INITIAL_WAIT_MS);
           waitingTimeouts.set(pid, timeout);
         }
       });

@@ -1,9 +1,24 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useGameStore } from '../store/useGameStore';
 import { Clock, ArrowLeft, Swords, Shield, User } from 'lucide-react';
 
 export const WaitingView: React.FC = () => {
-  const { waitingRound, showWaitingChoice, cancelWaiting, fightChoice } = useGameStore();
+  const { waitingRound, showWaitingChoice, waitingTimeoutMs, cancelWaiting, fightChoice } = useGameStore();
+  const [countdownMs, setCountdownMs] = useState(0);
+
+  useEffect(() => {
+    setCountdownMs(waitingTimeoutMs);
+  }, [waitingTimeoutMs]);
+
+  useEffect(() => {
+    if (countdownMs <= 0) return;
+    const interval = setInterval(() => {
+      setCountdownMs(prev => Math.max(0, prev - 100));
+    }, 100);
+    return () => clearInterval(interval);
+  }, [countdownMs]);
+
+  const seconds = Math.ceil(countdownMs / 1000);
 
   if (showWaitingChoice) {
     return (
@@ -16,6 +31,18 @@ export const WaitingView: React.FC = () => {
           <p className="text-slate-400 text-xs mb-6">
             Ninguém entrou na Rodada {waitingRound}. Escolha como prosseguir:
           </p>
+
+          <div className="mb-4">
+            <div className="text-3xl font-black text-pokemon-yellow tabular-nums">
+              {seconds}s
+            </div>
+            <div className="w-full bg-slate-700/50 rounded-full h-2 mt-2 overflow-hidden">
+              <div
+                className="bg-pokemon-yellow h-full rounded-full transition-all duration-100"
+                style={{ width: `${waitingTimeoutMs > 0 ? (countdownMs / waitingTimeoutMs) * 100 : 0}%` }}
+              />
+            </div>
+          </div>
 
           <div className="space-y-3">
             <button
@@ -47,7 +74,7 @@ export const WaitingView: React.FC = () => {
               <Clock className="w-5 h-5 text-slate-400 shrink-0" />
               <div>
                 <div className="text-sm font-bold text-white">Continuar esperando</div>
-                <div className="text-[10px] text-slate-400">Mais 15 segundos antes de enfrentar IA</div>
+                <div className="text-[10px] text-slate-400">Mais {Math.ceil(waitingTimeoutMs / 1000)} segundos antes de enfrentar IA</div>
               </div>
             </button>
           </div>
@@ -88,14 +115,20 @@ export const WaitingView: React.FC = () => {
           Rodada {waitingRound}
         </div>
 
-        <p className="text-slate-400 text-sm leading-relaxed mb-6">
+        <p className="text-slate-400 text-sm leading-relaxed mb-4">
           Seu time foi salvo. Quando outro jogador entrar, a batalha começará automaticamente.
         </p>
 
-        <div className="flex justify-center space-x-1 mb-8">
-          <span className="w-3 h-3 bg-pokemon-yellow rounded-full animate-pulse" style={{ animationDelay: '0ms' }}></span>
-          <span className="w-3 h-3 bg-pokemon-yellow rounded-full animate-pulse" style={{ animationDelay: '200ms' }}></span>
-          <span className="w-3 h-3 bg-pokemon-yellow rounded-full animate-pulse" style={{ animationDelay: '400ms' }}></span>
+        <div className="mb-6">
+          <div className="text-4xl font-black text-pokemon-yellow tabular-nums">
+            {seconds}s
+          </div>
+          <div className="w-full bg-slate-700/50 rounded-full h-2.5 mt-3 overflow-hidden">
+            <div
+              className="bg-pokemon-yellow h-full rounded-full transition-all duration-100"
+              style={{ width: `${waitingTimeoutMs > 0 ? (countdownMs / waitingTimeoutMs) * 100 : 0}%` }}
+            />
+          </div>
         </div>
 
         <button

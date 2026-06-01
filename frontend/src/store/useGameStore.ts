@@ -60,6 +60,7 @@ interface GameStore {
   isWaitingOpponent: boolean;
   waitingRound: number;
   showWaitingChoice: boolean;
+  waitingTimeoutMs: number;
   showHistory: boolean;
   matchHistory: MatchRecord[];
   errorMessage: string | null;
@@ -97,6 +98,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   isWaitingOpponent: false,
   waitingRound: 0,
   showWaitingChoice: false,
+  waitingTimeoutMs: 0,
   showHistory: false,
   matchHistory: loadHistory(),
   errorMessage: null,
@@ -138,20 +140,24 @@ export const useGameStore = create<GameStore>((set, get) => ({
       }
     });
 
-    socket.on('waitingOpponent', (data: { round: number }) => {
-      set({ isWaitingOpponent: true, waitingRound: data.round, showWaitingChoice: false });
+    socket.on('waitingOpponent', (data: { round: number; timeoutMs: number }) => {
+      set({ isWaitingOpponent: true, waitingRound: data.round, showWaitingChoice: false, waitingTimeoutMs: data.timeoutMs });
     });
 
-    socket.on('waitingChoice', (data: { round: number } | null) => {
+    socket.on('waitingChoice', (data: { round: number; timeoutMs: number } | null) => {
       if (data) {
-        set({ showWaitingChoice: true, waitingRound: data.round });
+        set({ showWaitingChoice: true, waitingRound: data.round, waitingTimeoutMs: data.timeoutMs });
       } else {
-        set({ showWaitingChoice: false });
+        set({ showWaitingChoice: false, waitingTimeoutMs: 0 });
       }
     });
 
+    socket.on('waitTimerUpdate', (data: { timeoutMs: number }) => {
+      set({ waitingTimeoutMs: data.timeoutMs });
+    });
+
     socket.on('clearChoice', () => {
-      set({ showWaitingChoice: false });
+      set({ showWaitingChoice: false, waitingTimeoutMs: 0 });
     });
 
     socket.on('error', (msg: string) => {
@@ -216,7 +222,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   cancelWaiting: () => {
     const { socket } = get();
     if (socket) socket.emit('cancelWait');
-    set({ isWaitingOpponent: false, waitingRound: 0, showWaitingChoice: false });
+    set({ isWaitingOpponent: false, waitingRound: 0, showWaitingChoice: false, waitingTimeoutMs: 0 });
   },
 
   fightChoice: (action) => {
