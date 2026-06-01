@@ -118,6 +118,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
       console.log('Connected to backend socket');
     });
 
+    socket.on('connect_error', (err) => {
+      console.error('Socket connection error:', err.message);
+      if (err.message === 'Invalid or expired token.') {
+        localStorage.removeItem('sam-token');
+        localStorage.removeItem('sam-player-id');
+        localStorage.removeItem('sam-username');
+      }
+    });
+
     socket.on('state', (state: GameState) => {
       set({ gameState: state });
     });

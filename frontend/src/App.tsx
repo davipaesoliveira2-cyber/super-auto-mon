@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
 import { useAuthStore } from './store/useAuthStore';
 import { useGameStore } from './store/useGameStore';
 import { ShopView } from './components/ShopView';
@@ -13,13 +13,12 @@ export const App: React.FC = () => {
   const logout = useAuthStore((s) => s.logout);
   const username = useAuthStore((s) => s.username);
   const { connectSocket, disconnectSocket, isBattleActive, isWaitingOpponent, gameState, showHistory, toggleHistory } = useGameStore();
-  const prevToken = useRef(token);
 
   useEffect(() => {
-    if (prevToken.current !== token) {
+    if (token) {
+      connectSocket();
+    } else {
       disconnectSocket();
-      if (token) connectSocket();
-      prevToken.current = token;
     }
   }, [token, connectSocket, disconnectSocket]);
 

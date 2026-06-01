@@ -167,84 +167,94 @@ export async function generatePokemon(speciesId: string, level: number = 30): Pr
   };
 }
 
+function getEvolutionLine(speciesId: string, evolveConfig: Record<string, any>): string[] {
+  const line = [speciesId];
+  let current = speciesId;
+  while (evolveConfig[current]?.evolvesInto && evolveConfig[current].evolvesInto !== current) {
+    current = evolveConfig[current].evolvesInto;
+    line.push(current);
+  }
+  return line;
+}
+
+export function isInSameEvolutionLine(a: string, b: string, evolveConfig: Record<string, any>): boolean {
+  if (a === b) return true;
+  const lineA = getEvolutionLine(a, evolveConfig);
+  const lineB = getEvolutionLine(b, evolveConfig);
+  return lineA.includes(b) || lineB.includes(a);
+}
+
+async function generateMovesForSpecies(speciesId: string, level: number): Promise<string[]> {
+  const learnsetObj = await Dex.learnsets.get(speciesId);
+  const movesPool: string[] = [];
+
+  if (learnsetObj && learnsetObj.learnset) {
+    for (const [moveId, sources] of Object.entries(learnsetObj.learnset)) {
+      if (bannedMoves.has(moveId)) continue;
+      const canLearnInGen1 = sources.some(source => {
+        const match = source.match(/^1L([0-9]+)$/);
+        if (match) {
+          const learnLevel = parseInt(match[1], 10);
+          return learnLevel <= level;
+        }
+        return false;
+      });
+      if (canLearnInGen1) {
+        movesPool.push(moveId);
+      }
+    }
+  }
+
+  if (movesPool.length === 0) {
+    movesPool.push('tackle');
+  }
+
+  let selectedMoves: string[] = [];
+  let attempts = 0;
+  while (attempts < 50) {
+    const tempMoves: string[] = [];
+    const poolCopy = [...movesPool];
+    const count = Math.min(4, poolCopy.length);
+    for (let i = 0; i < count; i++) {
+      const idx = Math.floor(Math.random() * poolCopy.length);
+      tempMoves.push(poolCopy.splice(idx, 1)[0]);
+    }
+    const hasOffensive = tempMoves.some(moveId => {
+      const move = Dex.moves.get(moveId);
+      return move.category !== 'Status' && (move.basePower > 0 || move.damage || move.damageCallback);
+    });
+    if (hasOffensive || poolCopy.length === 0) {
+      selectedMoves = tempMoves;
+      break;
+    }
+    attempts++;
+  }
+
+  return selectedMoves.length > 0 ? selectedMoves : movesPool.slice(0, 4);
+}
+
 export async function evolvePokemon(target: PokemonInstance, source: PokemonInstance, evolveConfig: Record<string, any>): Promise<PokemonInstance> {
-  const currentConfig = evolveConfig[target.species];
-  if (!currentConfig || !currentConfig.evolvesInto) {
-    // Não evolui mais, apenas soma cópias
-    return {
-      ...target,
-      copies: target.copies + source.copies
-    };
+  if (!isInSameEvolutionLine(target.species, source.species, evolveConfig)) {
+    return target;
   }
 
   const totalCopies = target.copies + source.copies;
-  if (totalCopies >= currentConfig.evolveCopies) {
-    // Evolui!
+  const currentConfig = evolveConfig[target.species];
+
+  if (currentConfig?.evolvesInto && currentConfig.evolvesInto !== target.species && totalCopies >= currentConfig.evolveCopies) {
     const nextSpeciesId = currentConfig.evolvesInto;
     const nextSpecies = Dex.species.get(nextSpeciesId);
-
-    // Regenera os golpes baseados na nova espécie
-    const level = target.level;
-    const learnsetObj = await Dex.learnsets.get(nextSpeciesId);
-    const movesPool: string[] = [];
-
-    if (learnsetObj && learnsetObj.learnset) {
-      for (const [moveId, sources] of Object.entries(learnsetObj.learnset)) {
-        if (bannedMoves.has(moveId)) continue;
-        const canLearnInGen1 = sources.some(source => {
-          const match = source.match(/^1L([0-9]+)$/);
-          if (match) {
-            const learnLevel = parseInt(match[1], 10);
-            return learnLevel <= level;
-          }
-          return false;
-        });
-
-        if (canLearnInGen1) {
-          movesPool.push(moveId);
-        }
-      }
-    }
-
-    if (movesPool.length === 0) {
-      movesPool.push('tackle');
-    }
-
-    let selectedMoves: string[] = [];
-    let attempts = 0;
-    while (attempts < 50) {
-      const tempMoves: string[] = [];
-      const poolCopy = [...movesPool];
-      const count = Math.min(4, poolCopy.length);
-      for (let i = 0; i < count; i++) {
-        const idx = Math.floor(Math.random() * poolCopy.length);
-        tempMoves.push(poolCopy.splice(idx, 1)[0]);
-      }
-      const hasOffensive = tempMoves.some(moveId => {
-        const move = Dex.moves.get(moveId);
-        return move.category !== 'Status' && (move.basePower > 0 || move.damage || move.damageCallback);
-      });
-      if (hasOffensive || poolCopy.length === 0) {
-        selectedMoves = tempMoves;
-        break;
-      }
-      attempts++;
-    }
-
-    if (selectedMoves.length === 0) {
-      selectedMoves = movesPool.slice(0, 4);
-    }
+    const moves = await generateMovesForSpecies(nextSpeciesId, target.level);
 
     return {
       ...target,
       species: nextSpeciesId,
       name: nextSpecies.name,
-      moves: selectedMoves,
+      moves,
       copies: totalCopies
     };
   }
 
-  // Não atingiu o limite de cópias para evoluir ainda
   return {
     ...target,
     copies: totalCopies

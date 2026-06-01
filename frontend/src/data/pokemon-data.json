@@ -1,35 +1,48 @@
 {
   "bulbasaur": { "tier": 1, "evolveCopies": 2, "evolvesInto": "ivysaur" },
+  "ivysaur": { "tier": 99, "evolveCopies": 3, "evolvesInto": "venusaur" },
   "charmander": { "tier": 1, "evolveCopies": 2, "evolvesInto": "charmeleon" },
+  "charmeleon": { "tier": 99, "evolveCopies": 3, "evolvesInto": "charizard" },
   "squirtle": { "tier": 1, "evolveCopies": 2, "evolvesInto": "wartortle" },
+  "wartortle": { "tier": 99, "evolveCopies": 3, "evolvesInto": "blastoise" },
   "caterpie": { "tier": 1, "evolveCopies": 2, "evolvesInto": "metapod" },
+  "metapod": { "tier": 99, "evolveCopies": 2, "evolvesInto": "butterfree" },
   "weedle": { "tier": 1, "evolveCopies": 2, "evolvesInto": "kakuna" },
+  "kakuna": { "tier": 99, "evolveCopies": 2, "evolvesInto": "beedrill" },
   "pidgey": { "tier": 1, "evolveCopies": 2, "evolvesInto": "pidgeotto" },
+  "pidgeotto": { "tier": 99, "evolveCopies": 3, "evolvesInto": "pidgeot" },
   "rattata": { "tier": 1, "evolveCopies": 2, "evolvesInto": "raticate" },
-  "magikarp": { "tier": 1, "evolveCopies": 5, "evolvesInto": "gyarados" },
-  
+  "magikarp": { "tier": 1, "evolveCopies": 7, "evolvesInto": "gyarados" },
+
   "pikachu": { "tier": 2, "evolveCopies": 2, "evolvesInto": "raichu" },
-  "growlithe": { "tier": 2, "evolveCopies": 2, "evolvesInto": "arcanine" },
+  "growlithe": { "tier": 2, "evolveCopies": 3, "evolvesInto": "arcanine" },
   "sandshrew": { "tier": 2, "evolveCopies": 2, "evolvesInto": "sandslash" },
   "oddish": { "tier": 2, "evolveCopies": 2, "evolvesInto": "gloom" },
+  "gloom": { "tier": 99, "evolveCopies": 3, "evolvesInto": "vileplume" },
   "bellsprout": { "tier": 2, "evolveCopies": 2, "evolvesInto": "weepinbell" },
+  "weepinbell": { "tier": 99, "evolveCopies": 3, "evolvesInto": "victreebel" },
   "meowth": { "tier": 2, "evolveCopies": 2, "evolvesInto": "persian" },
-  
+
   "abra": { "tier": 3, "evolveCopies": 2, "evolvesInto": "kadabra" },
+  "kadabra": { "tier": 99, "evolveCopies": 3, "evolvesInto": "alakazam" },
   "gastly": { "tier": 3, "evolveCopies": 2, "evolvesInto": "haunter" },
+  "haunter": { "tier": 99, "evolveCopies": 3, "evolvesInto": "gengar" },
   "machop": { "tier": 3, "evolveCopies": 2, "evolvesInto": "machoke" },
+  "machoke": { "tier": 99, "evolveCopies": 3, "evolvesInto": "machamp" },
   "geodude": { "tier": 3, "evolveCopies": 2, "evolvesInto": "graveler" },
+  "graveler": { "tier": 99, "evolveCopies": 3, "evolvesInto": "golem" },
   "eevee": { "tier": 3, "evolveCopies": 3, "evolvesInto": "vaporeon" },
-  
+
   "dratini": { "tier": 4, "evolveCopies": 3, "evolvesInto": "dragonair" },
+  "dragonair": { "tier": 99, "evolveCopies": 4, "evolvesInto": "dragonite" },
   "ponyta": { "tier": 4, "evolveCopies": 2, "evolvesInto": "rapidash" },
-  "rhyhorn": { "tier": 4, "evolveCopies": 2, "evolvesInto": "rhydon" },
-  "magnemite": { "tier": 4, "evolveCopies": 2, "evolvesInto": "magneton" },
-  
+  "rhyhorn": { "tier": 4, "evolveCopies": 3, "evolvesInto": "rhydon" },
+  "magnemite": { "tier": 4, "evolveCopies": 3, "evolvesInto": "magneton" },
+
   "scyther": { "tier": 5, "evolveCopies": 3, "evolvesInto": "scizor" },
   "lapras": { "tier": 5, "evolveCopies": 3, "evolvesInto": "lapras" },
   "snorlax": { "tier": 5, "evolveCopies": 3, "evolvesInto": "snorlax" },
-  "tangela": { "tier": 5, "evolveCopies": 2, "evolvesInto": "tangrowth" },
-  
+  "tangela": { "tier": 5, "evolveCopies": 3, "evolvesInto": "tangrowth" },
+
   "mew": { "tier": 6, "evolveCopies": 3, "evolvesInto": "mew" }
 }

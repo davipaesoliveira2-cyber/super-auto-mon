@@ -1,4 +1,4 @@
-import { PokemonInstance, generatePokemon, evolvePokemon } from '../utils/pokemon-generator';
+import { PokemonInstance, generatePokemon, evolvePokemon, isInSameEvolutionLine } from '../utils/pokemon-generator';
 import pokemonData from '../data/pokemon-data.json';
 
 export interface ShopItem {
@@ -150,11 +150,11 @@ export class GameManager {
       this.state.gold -= item.cost;
       this.state.shop.splice(shopIndex, 1);
       return true;
-    } else if (targetSlot.species === item.pokemonInstance.species) {
-      // Fusão ao comprar do mesmo tipo
+    } else if (isInSameEvolutionLine(targetSlot.species, item.pokemonInstance.species, pokemonData)) {
+      // Fusão ao comprar da mesma linha evolutiva
       this.state.gold -= item.cost;
       this.state.shop.splice(shopIndex, 1);
-      
+
       evolvePokemon(targetSlot, item.pokemonInstance, pokemonData).then(evolved => {
         this.state.team[teamSlotIndex] = evolved;
       });
@@ -215,8 +215,8 @@ export class GameManager {
       return true;
     }
 
-    if (source.species === target.species) {
-      // Fusão
+    if (isInSameEvolutionLine(source.species, target.species, pokemonData)) {
+      // Fusão (mesma linha evolutiva)
       const evolved = await evolvePokemon(target, source, pokemonData);
       this.state.team[toIndex] = evolved;
       this.state.team[fromIndex] = null;
