@@ -197,11 +197,24 @@ export const ShopView: React.FC = () => {
                         Nv {pokemon.level}
                       </div>
                       
-                      {/* Fusions/Copies Badge */}
+                      {/* Evolution Progress */}
                       <div className="mt-1 flex items-center justify-center space-x-1">
-                        <span className="text-[9px] bg-slate-950 px-2 py-0.5 rounded-full border border-slate-800 text-slate-300">
-                          {pokemon.copies} {pokemon.copies === 1 ? 'Cópia' : 'Cópias'}
-                        </span>
+                        {(() => {
+                          const config = pokemonData[pokemon.species as keyof typeof pokemonData] as { evolveCopies?: number; evolvesInto?: string } | undefined;
+                          const needed = config?.evolveCopies;
+                          if (needed && config?.evolvesInto && config.evolvesInto !== pokemon.species) {
+                            return (
+                              <span className="text-[9px] bg-slate-950 px-2 py-0.5 rounded-full border border-slate-800 text-slate-300 font-mono">
+                                {pokemon.copies}/{needed}
+                              </span>
+                            );
+                          }
+                          return (
+                            <span className="text-[9px] bg-slate-950 px-2 py-0.5 rounded-full border border-slate-800 text-pokemon-yellow/60 font-bold">
+                              MAX
+                            </span>
+                          );
+                        })()}
                       </div>
                     </div>
 
