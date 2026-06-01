@@ -1,4 +1,4 @@
-# Super Auto Mon ⚔️🐢🔥 (Pokémon Auto Battler)
+# Super Auto Mon  (Pokémon Auto Battler)
 
 Bem-vindo ao **Super Auto Mon**, um auto battler estratégico no estilo *Super Auto Pets* que utiliza as mecânicas, fórmulas e o motor de simulação oficial do **Pokémon Showdown** para travar combates 100% fiéis às regras oficiais de Pokémon.
 
