@@ -2,6 +2,19 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useGameStore } from '../store/useGameStore';
 import { Swords, FastForward, SkipForward, ArrowLeft, Shield, Flame } from 'lucide-react';
 
+const ITEM_NAMES: Record<string, string> = {
+  leftovers: 'Leftovers',
+  berry: 'Oran Berry',
+  goldberry: 'Gold Berry',
+  quickclaw: 'Quick Claw',
+  kingsrock: "King's Rock",
+  focusband: 'Focus Band',
+  choiceband: 'Choice Band',
+  mysticwater: 'Mystic Water',
+  charcoal: 'Charcoal',
+  miracleseed: 'Miracle Seed',
+};
+
 interface ActiveFighter {
   name: string;
   species: string;
@@ -9,12 +22,13 @@ interface ActiveFighter {
   currentHp: number;
   gender: string;
   level: number;
+  item: string | null;
 }
 
 type SpeedOption = '1x' | '2x' | '4x' | '8x' | '16x';
 
 export const BattleView: React.FC = () => {
-  const { battleResult, closeBattle } = useGameStore();
+  const { battleResult, closeBattle, gameState } = useGameStore();
 
   const [logIndex, setLogIndex] = useState(0);
   const [speedOption, setSpeedOption] = useState<SpeedOption>('1x');
@@ -76,7 +90,7 @@ export const BattleView: React.FC = () => {
             if (d === 'M' || d === 'F') gd = d;
           }
           const hp = (p[4] || '0/0').split('/');
-          return { name: n, species: sp, maxHp: parseInt(hp[1], 10) || 100, currentHp: parseInt(hp[0], 10) || 1, gender: gd, level: lv };
+          return { name: n, species: sp, maxHp: parseInt(hp[1], 10) || 100, currentHp: parseInt(hp[0], 10) || 1, gender: gd, level: lv, item: null };
         }
       }
       return null;
@@ -108,7 +122,7 @@ export const BattleView: React.FC = () => {
           if (d === 'M' || d === 'F') gd = d;
         }
         const hp = (p[4] || '0/0').split('/');
-        last = { name: n, species: sp, maxHp: parseInt(hp[1], 10) || 100, currentHp: parseInt(hp[0], 10) || 1, gender: gd, level: lv };
+        last = { name: n, species: sp, maxHp: parseInt(hp[1], 10) || 100, currentHp: parseInt(hp[0], 10) || 1, gender: gd, level: lv, item: null };
       }
     }
     return last;
@@ -180,7 +194,6 @@ export const BattleView: React.FC = () => {
     switch (cmd) {
       case 'switch':
       case 'drag': {
-        // Formato: |switch|p1a: Bulbasaur|Bulbasaur, L30, M|76/76
         const isP1 = parts[2].startsWith('p1');
         const name = parts[2].split(': ')[1] || parts[3].split(', ')[0];
         const details = parts[3].split(', ');
@@ -197,7 +210,11 @@ export const BattleView: React.FC = () => {
         const currentHp = parseInt(hpParts[0], 10);
         const maxHp = parseInt(hpParts[1], 10);
 
-        const fighter: ActiveFighter = { name, species, maxHp, currentHp, gender, level };
+        const posLetter = parts[2].charAt(2);
+        const team = isP1 ? gameState?.team : battleResult?.opponentTeam;
+        const item = team ? getItemFromTeam(team, posLetter) : null;
+
+        const fighter: ActiveFighter = { name, species, maxHp, currentHp, gender, level, item };
 
         if (isP1) {
           setP1Active(fighter);
@@ -447,6 +464,12 @@ export const BattleView: React.FC = () => {
     return `https://img.pokemondb.net/sprites/black-white/normal/${species}.png`;
   };
 
+  const getItemFromTeam = (team: (import('../store/useGameStore').PokemonInstance | null)[], posLetter: string): string | null => {
+    const nonNull = team.filter(p => p !== null);
+    const idx = posLetter.charCodeAt(0) - 'a'.charCodeAt(0);
+    return nonNull[idx]?.item || null;
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-slate-950 p-6 select-none justify-between">
       {/* Top Header */}
@@ -517,6 +540,11 @@ export const BattleView: React.FC = () => {
                       <span className="font-extrabold text-sm text-white capitalize leading-none">{p1Active.name}</span>
                       <span className="text-[9px] text-pokemon-yellow font-bold uppercase">Nv {p1Active.level}</span>
                     </div>
+                    {p1Active.item && (
+                      <div className="text-[8px] text-sky-400 font-bold mb-1">
+                        ◆ {ITEM_NAMES[p1Active.item] || p1Active.item}
+                      </div>
+                    )}
                     <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
                       <div
                         className={`h-full transition-all duration-300 ${
@@ -584,6 +612,11 @@ export const BattleView: React.FC = () => {
                       <span className="font-extrabold text-sm text-white capitalize leading-none">{p2Active.name}</span>
                       <span className="text-[9px] text-pokemon-yellow font-bold uppercase">Nv {p2Active.level}</span>
                     </div>
+                    {p2Active.item && (
+                      <div className="text-[8px] text-sky-400 font-bold mb-1">
+                        ◆ {ITEM_NAMES[p2Active.item] || p2Active.item}
+                      </div>
+                    )}
                     <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
                       <div
                         className={`h-full transition-all duration-300 ${
@@ -719,7 +752,7 @@ export const BattleView: React.FC = () => {
                   </div>
                   <div className="flex justify-center space-x-2 overflow-x-auto py-1">
                     {battleResult.opponentTeam.map((poke, index) => poke && (
-                      <div key={index} className="bg-slate-900/80 p-1.5 rounded-xl border border-slate-800 flex items-center justify-center shadow" title={poke.name}>
+                      <div key={index} className="bg-slate-900/80 p-1.5 rounded-xl border border-slate-800 flex flex-col items-center justify-center shadow" title={poke.name}>
                         <img
                           src={getSpriteUrl(poke.species)}
                           alt={poke.name}
@@ -728,6 +761,11 @@ export const BattleView: React.FC = () => {
                             (e.target as HTMLImageElement).src = getFallbackUrl(poke.species);
                           }}
                         />
+                        {poke.item && (
+                          <span className="text-[6px] text-sky-400 font-bold mt-0.5 leading-tight">
+                            {ITEM_NAMES[poke.item] || poke.item}
+                          </span>
+                        )}
                       </div>
                     ))}
                   </div>

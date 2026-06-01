@@ -88,8 +88,7 @@ export function runBattle(
   battle.setPlayer('p2', { name: name2, team: formattedTeam2 });
 
   let loops = 0;
-  // Limite de 500 loops para evitar loops infinitos
-  while (!battle.ended && loops < 500) {
+  while (!battle.ended && loops < 2000) {
     loops++;
     
     // Processar escolha para o p1 se necessário
@@ -135,7 +134,22 @@ export function runBattle(
     }
   }
 
-  const winner = battle.winner === name1 ? 'p1' : (battle.winner === name2 ? 'p2' : 'draw');
+  let winner: string;
+  if (battle.winner === name1) {
+    winner = 'p1';
+  } else if (battle.winner === name2) {
+    winner = 'p2';
+  } else {
+    const remaining1 = (battle.p1 as any).pokemon.filter((p: any) => p.hp > 0).length;
+    const remaining2 = (battle.p2 as any).pokemon.filter((p: any) => p.hp > 0).length;
+    if (remaining1 > remaining2) {
+      winner = 'p1';
+    } else if (remaining2 > remaining1) {
+      winner = 'p2';
+    } else {
+      winner = 'draw';
+    }
+  }
 
   return {
     winner,
