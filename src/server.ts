@@ -15,6 +15,7 @@ const fastify = Fastify({ logger: true });
 const activeSessions = new Map<string, GameManager>();
 const playerSockets = new Map<string, Socket>();
 const waitingTimeouts = new Map<string, NodeJS.Timeout>();
+const choiceFallbackTimers = new Map<string, NodeJS.Timeout>();
 
 fastify.addHook('onRequest', (request, reply, done) => {
   reply.header('Access-Control-Allow-Origin', '*');
@@ -142,14 +143,14 @@ const start = async () => {
 
     io.on('connection', async (socket) => {
       const pid = (socket as any).authedPlayerId as string;
-      console.log(`Client connected: ${socket.id} (Player ID: ${pid})`);
+      const username = (socket as any).authedUsername as string;
+      console.log(`Client connected: ${socket.id} (${username})`);
 
       playerSockets.set(pid, socket);
 
       let gm = activeSessions.get(pid) ?? null;
       if (!gm) {
-        const shortId = pid.substring(pid.length - 4);
-        gm = new GameManager(pid, `Jogador_${shortId}`);
+        gm = new GameManager(pid, username);
         activeSessions.set(pid, gm);
         await gm.rollShop();
       }
@@ -294,22 +295,71 @@ const start = async () => {
                 if (ft) { clearTimeout(ft); waitingTimeouts.delete(found.playerId); }
               }
             } else {
-              console.log(`AI fallback for ${pid} round ${round}`);
-              await matchmaker.removeTeamDb(pid, round);
-              const aiTeam = await matchmaker.generateFallbackTeam(round);
-              const fbResult = runBattle(myTeam, aiTeam, st.playerName, `Treinador da Rodada ${round}`);
-              const fbWon = fbResult.winner === 'p1';
-              await g.nextRound(fbWon);
+              console.log(`Asking ${pid} for fight choice round ${round}`);
+              socket.emit('waitingChoice', { round });
 
-              socket.emit('battleResult', {
-                winner: fbResult.winner,
-                log: fbResult.log,
-                opponentName: `Treinador da Rodada ${round}`,
-                opponentTeam: aiTeam
-              });
-              socket.emit('state', g.getState());
+              const choiceHandler = async (choice: { action: 'ai' | 'ghost' | 'wait' }) => {
+                socket.off('fightChoice', choiceHandler);
+                const ft = choiceFallbackTimers.get(pid);
+                if (ft) { clearTimeout(ft); choiceFallbackTimers.delete(pid); }
+
+                if (choice.action === 'wait') {
+                  const newTimeout = setTimeout(async () => {
+                    waitingTimeouts.delete(pid);
+                    if (getGM().getState().round !== round) return;
+                    await matchmaker.removeTeamDb(pid, round);
+                    const aiTeam = await matchmaker.generateFallbackTeam(round);
+                    const fbResult = runBattle(myTeam, aiTeam, st.playerName, `Treinador da Rodada ${round}`);
+                    const fbWon = fbResult.winner === 'p1';
+                    await g.nextRound(fbWon);
+                    socket.emit('battleResult', {
+                      winner: fbResult.winner, log: fbResult.log,
+                      opponentName: `Treinador da Rodada ${round}`, opponentTeam: aiTeam
+                    });
+                    socket.emit('state', g.getState());
+                  }, 15000);
+                  waitingTimeouts.set(pid, newTimeout);
+                  return;
+                }
+
+                await matchmaker.removeTeamDb(pid, round);
+
+                if (choice.action === 'ghost') {
+                  console.log(`Ghost fight for ${pid} round ${round}`);
+                  const ghostResult = runBattle(myTeam, myTeam.map(p => p ? { ...p } : null), st.playerName, `${st.playerName} (Fantasmal)`);
+                  const ghostWon = ghostResult.winner === 'p1';
+                  await g.nextRound(ghostWon);
+                  socket.emit('battleResult', {
+                    winner: ghostResult.winner, log: ghostResult.log,
+                    opponentName: `${st.playerName} (Fantasmal)`, opponentTeam: myTeam
+                  });
+                  socket.emit('state', g.getState());
+                } else {
+                  console.log(`AI fallback for ${pid} round ${round}`);
+                  const aiTeam = await matchmaker.generateFallbackTeam(round);
+                  const fbResult = runBattle(myTeam, aiTeam, st.playerName, `Treinador da Rodada ${round}`);
+                  const fbWon = fbResult.winner === 'p1';
+                  await g.nextRound(fbWon);
+                  socket.emit('battleResult', {
+                    winner: fbResult.winner, log: fbResult.log,
+                    opponentName: `Treinador da Rodada ${round}`, opponentTeam: aiTeam
+                  });
+                  socket.emit('state', g.getState());
+                }
+              };
+              socket.on('fightChoice', choiceHandler);
+
+              const fallback = setTimeout(() => {
+                socket.off('fightChoice', choiceHandler);
+                choiceFallbackTimers.delete(pid);
+                if (getGM().getState().round === round) {
+                  console.log(`Choice default AI for ${pid} round ${round}`);
+                  socket.emit('clearChoice');
+                }
+              }, 15000);
+              choiceFallbackTimers.set(pid, fallback);
             }
-          }, 20000);
+          }, 10000);
           waitingTimeouts.set(pid, timeout);
         }
       });
@@ -318,8 +368,7 @@ const start = async () => {
         const cur = getGM().getState();
         await matchmaker.removeTeamDb(pid, cur.round);
 
-        const shortId = pid.substring(pid.length - 4);
-        const newGm = new GameManager(pid, `Jogador_${shortId}`);
+        const newGm = new GameManager(pid, username);
         activeSessions.set(pid, newGm);
         await newGm.rollShop();
         socket.emit('state', newGm.getState());
@@ -327,10 +376,10 @@ const start = async () => {
 
       socket.on('cancelWait', async () => {
         const t = waitingTimeouts.get(pid);
-        if (t) {
-          clearTimeout(t);
-          waitingTimeouts.delete(pid);
-        }
+        if (t) { clearTimeout(t); waitingTimeouts.delete(pid); }
+        const ct = choiceFallbackTimers.get(pid);
+        if (ct) { clearTimeout(ct); choiceFallbackTimers.delete(pid); }
+        socket.off('fightChoice', () => {});
         await matchmaker.removeTeamDb(pid, getGM().getState().round);
         socket.emit('state', getGM().getState());
       });
@@ -339,10 +388,9 @@ const start = async () => {
         console.log(`Client disconnected: ${socket.id}`);
         playerSockets.delete(pid);
         const t = waitingTimeouts.get(pid);
-        if (t) {
-          clearTimeout(t);
-          waitingTimeouts.delete(pid);
-        }
+        if (t) { clearTimeout(t); waitingTimeouts.delete(pid); }
+        const ct = choiceFallbackTimers.get(pid);
+        if (ct) { clearTimeout(ct); choiceFallbackTimers.delete(pid); }
         const cur = activeSessions.get(pid);
         if (cur) {
           await matchmaker.removeTeamDb(pid, cur.getState().round);

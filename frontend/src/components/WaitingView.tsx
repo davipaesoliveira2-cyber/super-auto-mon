@@ -1,13 +1,72 @@
 import React from 'react';
 import { useGameStore } from '../store/useGameStore';
-import { Clock, ArrowLeft } from 'lucide-react';
+import { Clock, ArrowLeft, Swords, Shield, User } from 'lucide-react';
 
 export const WaitingView: React.FC = () => {
-  const { waitingRound, cancelWaiting } = useGameStore();
+  const { waitingRound, showWaitingChoice, cancelWaiting, fightChoice } = useGameStore();
+
+  if (showWaitingChoice) {
+    return (
+      <div className="flex flex-col min-h-screen pokemon-bg items-center justify-center p-6 select-none">
+        <div className="pokemon-card rounded-3xl p-8 max-w-md w-full text-center">
+          <Shield className="w-12 h-12 text-pokemon-yellow mx-auto mb-3" />
+          <h2 className="text-xl font-black uppercase tracking-wider text-white mb-1">
+            Nenhum Oponente Encontrado
+          </h2>
+          <p className="text-slate-400 text-xs mb-6">
+            Ninguém entrou na Rodada {waitingRound}. Escolha como prosseguir:
+          </p>
+
+          <div className="space-y-3">
+            <button
+              onClick={() => fightChoice('ai')}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-pokemon-blue/10 border border-pokemon-blue/30 hover:bg-pokemon-blue/20 text-left transition"
+            >
+              <Swords className="w-5 h-5 text-pokemon-blue shrink-0" />
+              <div>
+                <div className="text-sm font-bold text-white">Lutar contra IA</div>
+                <div className="text-[10px] text-slate-400">Um time gerado automaticamente</div>
+              </div>
+            </button>
+
+            <button
+              onClick={() => fightChoice('ghost')}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-purple-500/10 border border-purple-500/30 hover:bg-purple-500/20 text-left transition"
+            >
+              <User className="w-5 h-5 text-purple-400 shrink-0" />
+              <div>
+                <div className="text-sm font-bold text-white">Lutar contra meu time (Fantasma)</div>
+                <div className="text-[10px] text-slate-400">Batalha contra uma cópia do seu próprio time</div>
+              </div>
+            </button>
+
+            <button
+              onClick={() => fightChoice('wait')}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-800/50 border border-slate-700 hover:bg-slate-800 text-left transition"
+            >
+              <Clock className="w-5 h-5 text-slate-400 shrink-0" />
+              <div>
+                <div className="text-sm font-bold text-white">Continuar esperando</div>
+                <div className="text-[10px] text-slate-400">Mais 15 segundos antes de enfrentar IA</div>
+              </div>
+            </button>
+          </div>
+
+          <button
+            onClick={cancelWaiting}
+            className="mt-6 flex items-center justify-center space-x-2 mx-auto text-slate-500 hover:text-pokemon-yellow text-xs transition"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Voltar para Loja</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col min-h-screen pokemon-bg items-center justify-center p-6 select-none">
-      <div className="pokemon-card rounded-3xl p-10 max-w-md w-full text-center relative">
+      <div className="pokemon-card rounded-3xl p-10 max-w-md w-full text-center">
         <div className="flex justify-center mb-6">
           <div className="relative">
             <img
@@ -30,7 +89,7 @@ export const WaitingView: React.FC = () => {
         </div>
 
         <p className="text-slate-400 text-sm leading-relaxed mb-6">
-          Seu time foi salvo. Quando outro jogador entrar na mesma rodada, a batalha começará automaticamente.
+          Seu time foi salvo. Quando outro jogador entrar, a batalha começará automaticamente.
         </p>
 
         <div className="flex justify-center space-x-1 mb-8">

@@ -45,16 +45,28 @@ export interface BattleResult {
   opponentTeam: (PokemonInstance | null)[];
 }
 
+interface MatchRecord {
+  id: string;
+  round: number;
+  winner: string;
+  opponentName: string;
+  timestamp: number;
+}
+
 interface GameStore {
   gameState: GameState | null;
   battleResult: BattleResult | null;
   isBattleActive: boolean;
   isWaitingOpponent: boolean;
   waitingRound: number;
+  showWaitingChoice: boolean;
+  showHistory: boolean;
+  matchHistory: MatchRecord[];
   errorMessage: string | null;
   socket: Socket | null;
   connectSocket: () => void;
   disconnectSocket: () => void;
+  toggleHistory: () => void;
   reroll: () => void;
   toggleFreeze: (shopItemId: string) => void;
   buyPokemon: (shopItemId: string, teamSlotIndex: number) => void;
@@ -64,10 +76,19 @@ interface GameStore {
   endTurn: () => void;
   closeBattle: () => void;
   cancelWaiting: () => void;
+  fightChoice: (action: 'ai' | 'ghost' | 'wait') => void;
   resetGame: () => void;
 }
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+
+function loadHistory(): MatchRecord[] {
+  try { return JSON.parse(localStorage.getItem('sam-history') || '[]'); } catch { return []; }
+}
+
+function saveHistory(records: MatchRecord[]) {
+  localStorage.setItem('sam-history', JSON.stringify(records.slice(-50)));
+}
 
 export const useGameStore = create<GameStore>((set, get) => ({
   gameState: null,
@@ -75,6 +96,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
   isBattleActive: false,
   isWaitingOpponent: false,
   waitingRound: 0,
+  showWaitingChoice: false,
+  showHistory: false,
+  matchHistory: loadHistory(),
   errorMessage: null,
   socket: null,
 
@@ -97,11 +121,37 @@ export const useGameStore = create<GameStore>((set, get) => ({
     });
 
     socket.on('battleResult', (result: BattleResult) => {
-      set({ battleResult: result, isBattleActive: true, isWaitingOpponent: false });
+      set({ battleResult: result, isBattleActive: true, isWaitingOpponent: false, showWaitingChoice: false });
+      const gs = get().gameState;
+      if (gs) {
+        const record: MatchRecord = {
+          id: Date.now().toString(36),
+          round: gs.round,
+          winner: result.winner,
+          opponentName: result.opponentName,
+          timestamp: Date.now(),
+        };
+        const history = loadHistory();
+        history.unshift(record);
+        saveHistory(history);
+        set({ matchHistory: history });
+      }
     });
 
     socket.on('waitingOpponent', (data: { round: number }) => {
-      set({ isWaitingOpponent: true, waitingRound: data.round });
+      set({ isWaitingOpponent: true, waitingRound: data.round, showWaitingChoice: false });
+    });
+
+    socket.on('waitingChoice', (data: { round: number } | null) => {
+      if (data) {
+        set({ showWaitingChoice: true, waitingRound: data.round });
+      } else {
+        set({ showWaitingChoice: false });
+      }
+    });
+
+    socket.on('clearChoice', () => {
+      set({ showWaitingChoice: false });
     });
 
     socket.on('error', (msg: string) => {
@@ -116,8 +166,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const { socket } = get();
     if (socket) {
       socket.disconnect();
-      set({ socket: null, gameState: null, battleResult: null, isBattleActive: false, isWaitingOpponent: false });
+      set({ socket: null, gameState: null, battleResult: null, isBattleActive: false, isWaitingOpponent: false, showWaitingChoice: false });
     }
+  },
+
+  toggleHistory: () => {
+    set((s) => ({ showHistory: !s.showHistory }));
   },
 
   reroll: () => {
@@ -162,7 +216,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
   cancelWaiting: () => {
     const { socket } = get();
     if (socket) socket.emit('cancelWait');
-    set({ isWaitingOpponent: false, waitingRound: 0 });
+    set({ isWaitingOpponent: false, waitingRound: 0, showWaitingChoice: false });
+  },
+
+  fightChoice: (action) => {
+    const { socket } = get();
+    if (socket) socket.emit('fightChoice', { action });
+    set({ showWaitingChoice: false });
   },
 
   resetGame: () => {

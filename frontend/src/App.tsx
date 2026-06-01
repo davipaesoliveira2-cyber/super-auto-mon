@@ -5,13 +5,14 @@ import { ShopView } from './components/ShopView';
 import { BattleView } from './components/BattleView';
 import { WaitingView } from './components/WaitingView';
 import { AuthView } from './components/AuthView';
-import { LogOut } from 'lucide-react';
+import { MatchHistoryView } from './components/MatchHistoryView';
+import { LogOut, History } from 'lucide-react';
 
 export const App: React.FC = () => {
   const token = useAuthStore((s) => s.token);
   const logout = useAuthStore((s) => s.logout);
   const username = useAuthStore((s) => s.username);
-  const { connectSocket, disconnectSocket, isBattleActive, isWaitingOpponent, gameState } = useGameStore();
+  const { connectSocket, disconnectSocket, isBattleActive, isWaitingOpponent, gameState, showHistory, toggleHistory } = useGameStore();
   const prevToken = useRef(token);
 
   useEffect(() => {
@@ -26,7 +27,8 @@ export const App: React.FC = () => {
 
   return (
     <div className="min-h-screen text-slate-100 bg-slate-950 font-sans selection:bg-pokemon-yellow selection:text-slate-900">
-      <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-2 bg-slate-950/80 backdrop-blur-md border-b border-slate-800/50">
+      {showHistory && <MatchHistoryView />}
+      <header className="fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-4 py-2 bg-slate-950/80 backdrop-blur-md border-b border-slate-800/50">
         <div className="flex items-center gap-2">
           <span className="text-sm font-bold text-white">Super Auto Mon</span>
           <span className="bg-gradient-to-br from-pokemon-yellow to-pokemon-gold text-[10px] text-slate-900 font-bold px-2 py-0.5 rounded-full">
@@ -39,6 +41,13 @@ export const App: React.FC = () => {
               Rodada {gameState.round}
             </span>
           )}
+          <button
+            onClick={toggleHistory}
+            className="flex items-center gap-1 text-xs text-slate-400 hover:text-pokemon-yellow transition"
+            title="Histórico"
+          >
+            <History size={14} />
+          </button>
           <span className="text-xs text-slate-500">{username}</span>
           <button
             onClick={logout}

@@ -25,15 +25,33 @@ export const AuthView: React.FC = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-950 via-pokemon-red/10 to-slate-950 p-4">
       <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 bg-gradient-to-br from-pokemon-yellow to-pokemon-gold text-slate-900 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider mb-4 shadow-lg shadow-pokemon-yellow/20">
+        <div className="text-center mb-6">
+          <div className="inline-flex items-center gap-2 bg-gradient-to-br from-pokemon-yellow to-pokemon-gold text-slate-900 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider mb-3 shadow-lg shadow-pokemon-yellow/20">
             <span className="w-2 h-2 rounded-full bg-pokemon-red animate-pulse" />
-            Beta - Proof of Concept
+            Early Access - Proof of Concept
           </div>
           <h1 className="text-4xl font-extrabold text-white tracking-tight">
             Super Auto Mon
           </h1>
           <p className="text-slate-400 mt-1 text-sm">Pokémon Auto Battler</p>
+        </div>
+
+        {/* Project info card */}
+        <div className="pokemon-card rounded-2xl p-4 mb-4 text-center">
+          <p className="text-xs text-slate-300 leading-relaxed mb-2">
+            Monte seu time de Pokémon e enfrente outros treinadores em batalhas automáticas.
+            Compre Pokémon, equipe itens e evolua suas criaturas a cada rodada.
+          </p>
+          <div className="flex justify-center gap-3 text-[10px] text-slate-500">
+            <span>⚔️ VS Jogadores</span>
+            <span>🤖 VS IA</span>
+            <span>🔄 Matchmaking</span>
+          </div>
+          <div className="mt-3 bg-pokemon-yellow/10 border border-pokemon-yellow/20 rounded-xl px-3 py-2">
+            <p className="text-[10px] text-pokemon-yellow/80">
+              ⚠️ Early Access — funcionalidades em desenvolvimento. Dados podem ser resetados.
+            </p>
+          </div>
         </div>
 
         <div className="glass rounded-2xl p-6">
@@ -105,8 +123,8 @@ export const AuthView: React.FC = () => {
           </div>
         </div>
 
-        <p className="text-center text-slate-600 text-[10px] mt-6 leading-relaxed">
-          Super Auto Mon — Proof of Concept. Dados podem ser resetados a qualquer momento.
+        <p className="text-center text-slate-600 text-[10px] mt-4 leading-relaxed">
+          Super Auto Mon &copy; 2026 &mdash; Projeto independente sem vínculo com a Pokémon Company.
         </p>
       </div>
     </div>
