@@ -39,8 +39,7 @@ export const AuthView: React.FC = () => {
         {/* Project info card */}
         <div className="pokemon-card rounded-2xl p-4 mb-4 text-center">
           <p className="text-xs text-slate-300 leading-relaxed mb-2">
-            Monte seu time de Pokémon e enfrente outros treinadores em batalhas automáticas.
-            Compre Pokémon, equipe itens e evolua suas criaturas a cada rodada.
+            Se Super Auto Pets e Pokémon tivessem um filho. Só tem a gen1
           </p>
           <div className="flex justify-center gap-3 text-[10px] text-slate-500">
 
