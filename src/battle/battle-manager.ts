@@ -2,7 +2,7 @@ import { Battle, Dex } from '@pkmn/sim';
 import { PokemonInstance } from '../utils/pokemon-generator';
 
 export interface BattleResult {
-  winner: string; // 'p1' | 'p2' | 'draw'
+  winner: string; // 'p1' | 'p2'
   log: string[];
 }
 
@@ -46,9 +46,8 @@ export function runBattle(
   const cleanTeam1 = team1.filter((p): p is PokemonInstance => p !== null);
   const cleanTeam2 = team2.filter((p): p is PokemonInstance => p !== null);
 
-  // Se um dos times estiver vazio, o outro vence imediatamente
   if (cleanTeam1.length === 0 && cleanTeam2.length === 0) {
-    return { winner: 'draw', log: ['|chat|Ambos os times estão vazios! Empate.'] };
+    return { winner: 'p1', log: ['|chat|Ambos os times estão vazios! Vitória de p1.'] };
   }
   if (cleanTeam1.length === 0) {
     return { winner: 'p2', log: [`|chat|${name1} não possui Pokémon no time!`] };
@@ -139,6 +138,16 @@ export function runBattle(
     winner = 'p1';
   } else if (battle.winner === name2) {
     winner = 'p2';
+  } else if (battle.winner === '') {
+    const faintEntries = battle.log.filter(l => l.startsWith('|faint|'));
+    const lastFaint = faintEntries[faintEntries.length - 1] || '';
+    if (lastFaint.includes('|p2')) {
+      winner = 'p1';
+    } else if (lastFaint.includes('|p1')) {
+      winner = 'p2';
+    } else {
+      winner = 'p1';
+    }
   } else {
     const remaining1 = (battle.p1 as any).pokemon.filter((p: any) => p.hp > 0).length;
     const remaining2 = (battle.p2 as any).pokemon.filter((p: any) => p.hp > 0).length;
@@ -147,7 +156,7 @@ export function runBattle(
     } else if (remaining2 > remaining1) {
       winner = 'p2';
     } else {
-      winner = 'draw';
+      winner = 'p1';
     }
   }
 
@@ -168,6 +177,10 @@ function findNextSwitchIndex(side: any): number {
   return -1;
 }
 
+const STATUS_CONDITIONS = ['slp', 'par', 'brn', 'frz', 'psn', 'tox'] as const;
+
+const lastMoveWasStatus = new Map<string, boolean>();
+
 // IA simples de cálculo de dano e seleção do melhor golpe
 function chooseBestMove(battle: Battle, playerId: 'p1' | 'p2'): string {
   const side = playerId === 'p1' ? battle.p1 : battle.p2;
@@ -181,8 +194,14 @@ function chooseBestMove(battle: Battle, playerId: 'p1' | 'p2'): string {
   const moves = activePokemon.moveSlots;
   if (!moves || moves.length === 0) return '1';
 
+  // Contar status consecutivos
+  const wasStatus = lastMoveWasStatus.get(playerId) || false;
+  let consecutiveStatus = wasStatus ? 1 : 0;
+
   let bestMoveIndex = 1;
+  let bestDamagingIndex = -1;
   let highestScore = -9999;
+  let highestDamagingScore = -9999;
 
   for (let i = 0; i < moves.length; i++) {
     const moveSlot = moves[i];
@@ -204,7 +223,6 @@ function chooseBestMove(battle: Battle, playerId: 'p1' | 'p2'): string {
     if (moveData.category !== 'Status') {
       const basePower = moveData.basePower || 40;
       
-      // Cálculo básico de efetividade de tipo
       let effectiveness = 1;
       if (opponentPokemon.types) {
         for (const type of opponentPokemon.types) {
@@ -212,12 +230,30 @@ function chooseBestMove(battle: Battle, playerId: 'p1' | 'p2'): string {
         }
       }
       
-      // STAB (Same Type Attack Bonus)
       const isSTAB = activePokemon.types.includes(moveData.type);
       const stabMult = isSTAB ? 1.5 : 1;
 
       score = basePower * effectiveness * stabMult;
+
+      if (score > highestDamagingScore) {
+        highestDamagingScore = score;
+        bestDamagingIndex = i + 1;
+      }
     } else {
+      // Não usar status se o oponente já tiver a condição
+      if (moveData.status && STATUS_CONDITIONS.includes(moveData.status as any)) {
+        if (opponentPokemon.status === moveData.status) {
+          score = -9999;
+          continue;
+        }
+      }
+
+      // Não usar status se já usou status no turno anterior
+      if (wasStatus) {
+        score = -9999;
+        continue;
+      }
+
       // Golpes de status úteis
       if (moveData.id === 'spore' || moveData.id === 'sleeppowder' || moveData.id === 'thunderwave' || moveData.id === 'glare') {
         score = 80;
@@ -232,6 +268,21 @@ function chooseBestMove(battle: Battle, playerId: 'p1' | 'p2'): string {
       highestScore = score;
       bestMoveIndex = i + 1;
     }
+  }
+
+  // Se o melhor golpe for status e já usou status no turno anterior, força um ataque
+  const chosenMove = Dex.moves.get(moves[bestMoveIndex - 1].id);
+  if (chosenMove.category === 'Status') {
+    if (consecutiveStatus >= 1) {
+      if (bestDamagingIndex !== -1) {
+        bestMoveIndex = bestDamagingIndex;
+        lastMoveWasStatus.set(playerId, false);
+        return bestMoveIndex.toString();
+      }
+    }
+    lastMoveWasStatus.set(playerId, true);
+  } else {
+    lastMoveWasStatus.set(playerId, false);
   }
 
   return bestMoveIndex.toString();
