@@ -88,66 +88,28 @@ export async function generatePokemon(speciesId: string, level: number = 30): Pr
   // 6. Shiny (1 em 100 de chance para o divertimento do auto battler)
   const shiny = Math.random() < 0.01;
 
-  // 7. Sorteio de Golpes válidos da Gen 1 de nível <= level
+  // 7. Sorteio de Golpes válidos (qualquer geração) de nível <= level
   const learnsetObj = await Dex.learnsets.get(speciesId);
   const movesPool: string[] = [];
 
   if (learnsetObj && learnsetObj.learnset) {
     for (const [moveId, sources] of Object.entries(learnsetObj.learnset)) {
       if (bannedMoves.has(moveId)) continue;
-      
-      // Verifica se o golpe é aprendido na Gen 1 por nível até o nível especificado
-      const canLearnInGen1 = sources.some(source => {
-        // Formato: 1L[level] (ex: 1L15)
-        const match = source.match(/^1L([0-9]+)$/);
+
+      const canLearn = sources.some(source => {
+        // Formato: [gen]L[level] (ex: 9L1, 8L33, 7L27)
+        const match = source.match(/^(\d+)L(\d+)$/);
         if (match) {
-          const learnLevel = parseInt(match[1], 10);
+          const learnLevel = parseInt(match[2], 10);
           return learnLevel <= level;
         }
         return false;
       });
 
-      if (canLearnInGen1) {
+      if (canLearn) {
         movesPool.push(moveId);
       }
     }
-  }
-
-  // Se o pool de movimentos estiver muito vazio (improvável, mas segurança), adiciona Tackle
-  if (movesPool.length === 0) {
-    movesPool.push('tackle');
-  }
-
-  // Selecionar 4 movimentos únicos garantindo pelo menos um ofensivo
-  let selectedMoves: string[] = [];
-  let attempts = 0;
-  
-  while (attempts < 50) {
-    const tempMoves: string[] = [];
-    const poolCopy = [...movesPool];
-    
-    // Sorteia até 4
-    const count = Math.min(4, poolCopy.length);
-    for (let i = 0; i < count; i++) {
-      const idx = Math.floor(Math.random() * poolCopy.length);
-      tempMoves.push(poolCopy.splice(idx, 1)[0]);
-    }
-
-    // Verifica se possui pelo menos um ofensivo
-    const hasOffensive = tempMoves.some(moveId => {
-      const move = Dex.moves.get(moveId);
-      return move.category !== 'Status' && (move.basePower > 0 || move.damage || move.damageCallback);
-    });
-
-    if (hasOffensive || poolCopy.length === 0) {
-      selectedMoves = tempMoves;
-      break;
-    }
-    attempts++;
-  }
-
-  if (selectedMoves.length === 0) {
-    selectedMoves = movesPool.slice(0, 4);
   }
 
   return {
@@ -161,7 +123,7 @@ export async function generatePokemon(speciesId: string, level: number = 30): Pr
     ability,
     ivs,
     evs,
-    moves: selectedMoves,
+    moves: pickMoves(movesPool),
     item: null,
     copies: 1
   };
@@ -191,22 +153,26 @@ async function generateMovesForSpecies(speciesId: string, level: number): Promis
   if (learnsetObj && learnsetObj.learnset) {
     for (const [moveId, sources] of Object.entries(learnsetObj.learnset)) {
       if (bannedMoves.has(moveId)) continue;
-      const canLearnInGen1 = sources.some(source => {
-        const match = source.match(/^1L([0-9]+)$/);
+      const canLearn = sources.some(source => {
+        const match = source.match(/^(\d+)L(\d+)$/);
         if (match) {
-          const learnLevel = parseInt(match[1], 10);
+          const learnLevel = parseInt(match[2], 10);
           return learnLevel <= level;
         }
         return false;
       });
-      if (canLearnInGen1) {
+      if (canLearn) {
         movesPool.push(moveId);
       }
     }
   }
 
+  return pickMoves(movesPool);
+}
+
+function pickMoves(movesPool: string[]): string[] {
   if (movesPool.length === 0) {
-    movesPool.push('tackle');
+    return ['tackle'];
   }
 
   let selectedMoves: string[] = [];
