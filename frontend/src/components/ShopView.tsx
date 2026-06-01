@@ -74,40 +74,41 @@ export const ShopView: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-gradient-to-b from-slate-900 via-slate-950 to-slate-950 p-6">
-      {/* Top Header */}
-      <header className="flex flex-wrap justify-between items-center bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-2xl p-4 mb-6 shadow-2xl">
-        <div className="flex items-center space-x-4">
-          <div className="relative">
-            <img
-              src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/poke-ball.png"
-              alt="Pokeball"
-              className="w-12 h-12 drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]"
-            />
+    <div className="flex flex-col min-h-screen pokemon-bg p-6">
+      <div className="pokemon-card rounded-2xl p-4 mb-6">
+        <div className="flex flex-wrap justify-between items-center">
+          <div className="flex items-center space-x-4">
+            <div className="relative">
+              <img
+                src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/poke-ball.png"
+                alt="Pokeball"
+                className="w-12 h-12 drop-shadow-[0_0_12px_rgba(239,68,68,0.4)]"
+              />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold tracking-wide text-white uppercase">{gameState.playerName}</h1>
+              <p className="text-xs text-pokemon-yellow font-bold uppercase tracking-widest">Rodada {gameState.round}</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-xl font-bold tracking-wide text-white uppercase">{gameState.playerName}</h1>
-            <p className="text-xs text-pokemon-yellow font-bold uppercase tracking-widest">Rodada {gameState.round}</p>
+
+          <div className="flex items-center space-x-3 mt-2 sm:mt-0">
+            <div className="flex items-center space-x-1.5 bg-rose-500/10 border border-rose-500/30 px-3 py-1.5 rounded-full">
+              <Heart className="w-4 h-4 text-rose-500 fill-rose-500 animate-pulse" />
+              <span className="font-extrabold text-rose-400 text-sm">{gameState.hearts} / 5</span>
+            </div>
+
+            <div className="flex items-center space-x-1.5 bg-pokemon-blue/10 border border-pokemon-blue/30 px-3 py-1.5 rounded-full">
+              <Trophy className="w-4 h-4 text-pokemon-blue fill-pokemon-blue" />
+              <span className="font-extrabold text-pokemon-blue text-sm">{gameState.trophies}</span>
+            </div>
+
+            <div className="flex items-center space-x-1.5 bg-yellow-500/10 border border-yellow-500/30 px-3 py-1.5 rounded-full">
+              <Coins className="w-4 h-4 text-pokemon-yellow fill-pokemon-yellow" />
+              <span className="font-extrabold text-pokemon-yellow text-sm">{gameState.gold}</span>
+            </div>
           </div>
         </div>
-
-        <div className="flex items-center space-x-6">
-          <div className="flex items-center space-x-2 bg-rose-500/10 border border-rose-500/30 px-3 py-1.5 rounded-full">
-            <Heart className="w-5 h-5 text-rose-500 fill-rose-500 animate-pulse" />
-            <span className="font-extrabold text-rose-400">{gameState.hearts} / 5</span>
-          </div>
-
-          <div className="flex items-center space-x-2 bg-pokemon-blue/10 border border-pokemon-blue/30 px-3 py-1.5 rounded-full">
-            <Trophy className="w-5 h-5 text-pokemon-blue fill-pokemon-blue" />
-            <span className="font-extrabold text-pokemon-blue">{gameState.trophies}</span>
-          </div>
-
-          <div className="flex items-center space-x-2 bg-yellow-500/10 border border-yellow-500/30 px-4 py-1.5 rounded-full shadow-inner">
-            <Coins className="w-5 h-5 text-pokemon-yellow fill-pokemon-yellow" />
-            <span className="font-extrabold text-pokemon-yellow">{gameState.gold} Ouro</span>
-          </div>
-        </div>
-      </header>
+      </div>
 
       {/* Error Alert */}
       {errorMessage && (
@@ -141,15 +142,15 @@ export const ShopView: React.FC = () => {
               <div
                 key={idx}
                 onClick={() => handleTeamSlotClick(idx)}
-                className={`relative flex flex-col justify-between items-center rounded-2xl p-4 min-h-[220px] transition-all duration-300 cursor-pointer border shadow-lg ${
+                className={`relative flex flex-col justify-between items-center rounded-2xl p-4 min-h-[220px] transition-all duration-300 cursor-pointer border ${
                   pokemon
                     ? isSelected
-                      ? 'bg-pokemon-blue/20 border-pokemon-blue scale-105 shadow-pokemon-blue/20'
+                      ? 'pokemon-card border-pokemon-blue scale-105 pokemon-glow-blue'
                       : canMerge
                       ? 'bg-emerald-500/10 border-emerald-500/50 border-dashed animate-pulse'
-                      : 'bg-slate-900/80 border-slate-800 hover:border-slate-700 hover:scale-102'
+                      : 'pokemon-card hover:border-pokemon-yellow/20 hover:scale-[1.02]'
                     : selectedShopItem
-                    ? 'bg-slate-900/30 border-dashed border-slate-700 hover:bg-slate-900/50 hover:border-pokemon-yellow/50'
+                    ? 'pokemon-card border-dashed border-slate-700 hover:border-pokemon-yellow/50'
                     : 'bg-slate-900/20 border-slate-900/50 border-dashed'
                 }`}
               >
@@ -252,10 +253,10 @@ export const ShopView: React.FC = () => {
               <div
                 key={item.id}
                 onClick={() => handleShopItemClick(item)}
-                className={`relative flex flex-col justify-between items-center rounded-2xl p-4 min-h-[240px] cursor-pointer transition-all duration-300 border shadow-lg ${
+                className={`relative flex flex-col justify-between items-center rounded-2xl p-4 min-h-[240px] cursor-pointer transition-all duration-300 border ${
                   isSelected
-                    ? 'bg-amber-500/20 border-amber-500 scale-105 shadow-amber-500/20'
-                    : 'bg-slate-900/60 border-slate-800 hover:border-slate-700 hover:scale-102'
+                    ? 'pokemon-card border-amber-500 scale-105 pokemon-glow-yellow'
+                    : 'pokemon-card hover:border-pokemon-yellow/20 hover:scale-[1.02]'
                 }`}
               >
                 {/* Cost Tag */}
@@ -330,18 +331,19 @@ export const ShopView: React.FC = () => {
       </section>
 
       {/* Control Buttons */}
-      <footer className="mt-8 flex justify-between items-center pt-6 border-t border-slate-800/80">
+      <footer className="mt-8 flex justify-between items-center pt-6 border-t border-slate-800/60">
         <button
           onClick={resetGame}
-          className="text-slate-400 hover:text-white font-semibold text-sm transition-colors duration-300"
+          className="text-slate-500 hover:text-pokemon-yellow font-semibold text-sm transition-colors duration-300"
         >
           Reiniciar Jogo
         </button>
 
         <button
           onClick={endTurn}
-          className="bg-pokemon-red hover:bg-red-500 text-white font-black uppercase tracking-wider py-4 px-10 rounded-2xl shadow-xl hover:shadow-red-500/20 transition-all duration-300 transform active:scale-95 flex items-center space-x-2"
+          className="bg-gradient-to-r from-pokemon-red to-red-600 text-white font-black uppercase tracking-wider py-4 px-10 rounded-2xl shadow-xl hover:shadow-red-500/30 hover:brightness-110 transition-all duration-300 transform active:scale-95 flex items-center space-x-2 pokemon-glow-red"
         >
+          <Swords className="w-5 h-5" />
           <span>Ir para Batalha</span>
         </button>
       </footer>

@@ -54,6 +54,7 @@ interface GameStore {
   errorMessage: string | null;
   socket: Socket | null;
   connectSocket: () => void;
+  disconnectSocket: () => void;
   reroll: () => void;
   toggleFreeze: (shopItemId: string) => void;
   buyPokemon: (shopItemId: string, teamSlotIndex: number) => void;
@@ -80,11 +81,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
   connectSocket: () => {
     if (get().socket) return;
 
-    const playerId = 'p_' + Math.random().toString(36).substring(2, 15);
-    localStorage.setItem('super-auto-mon-player-id', playerId);
+    const token = localStorage.getItem('sam-token');
+    if (!token) return;
 
     const socket = io(BACKEND_URL, {
-      query: { playerId }
+      auth: { token }
     });
 
     socket.on('connect', () => {
@@ -109,6 +110,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
     });
 
     set({ socket });
+  },
+
+  disconnectSocket: () => {
+    const { socket } = get();
+    if (socket) {
+      socket.disconnect();
+      set({ socket: null, gameState: null, battleResult: null, isBattleActive: false, isWaitingOpponent: false });
+    }
   },
 
   reroll: () => {

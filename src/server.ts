@@ -1,9 +1,14 @@
 import Fastify from 'fastify';
 import { Server, Socket } from 'socket.io';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 import { GameManager } from './models/game-state';
 import { matchmaker } from './battle/matchmaker';
 import { runBattle, BattleResult } from './battle/battle-manager';
-import { initDb } from './db';
+import { initDb, createUser, findUserByUsername, findUserByPlayerId } from './db';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'super-auto-mon-beta-secret-2026';
+const SALT_ROUNDS = 10;
 
 const fastify = Fastify({ logger: true });
 
@@ -23,6 +28,67 @@ fastify.addHook('onRequest', (request, reply, done) => {
 
 fastify.get('/health', async () => {
   return { status: 'ok' };
+});
+
+// ---- Auth Routes ----
+
+fastify.post('/api/register', async (request, reply) => {
+  const { username, password } = request.body as { username?: string; password?: string };
+  if (!username || !password) {
+    return reply.status(400).send({ error: 'Username and password required.' });
+  }
+  if (username.length < 3) {
+    return reply.status(400).send({ error: 'Username must be at least 3 characters.' });
+  }
+  if (password.length < 4) {
+    return reply.status(400).send({ error: 'Password must be at least 4 characters.' });
+  }
+
+  const existing = await findUserByUsername(username);
+  if (existing) {
+    return reply.status(409).send({ error: 'Username already taken.' });
+  }
+
+  const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+  const playerId = 'p_' + Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
+
+  const user = await createUser(username, passwordHash, playerId);
+  const token = jwt.sign({ playerId: user.player_id, username: user.username }, JWT_SECRET, { expiresIn: '7d' });
+
+  return { token, playerId: user.player_id, username: user.username };
+});
+
+fastify.post('/api/login', async (request, reply) => {
+  const { username, password } = request.body as { username?: string; password?: string };
+  if (!username || !password) {
+    return reply.status(400).send({ error: 'Username and password required.' });
+  }
+
+  const user = await findUserByUsername(username);
+  if (!user) {
+    return reply.status(401).send({ error: 'Invalid username or password.' });
+  }
+
+  const valid = await bcrypt.compare(password, user.password_hash);
+  if (!valid) {
+    return reply.status(401).send({ error: 'Invalid username or password.' });
+  }
+
+  const token = jwt.sign({ playerId: user.player_id, username: user.username }, JWT_SECRET, { expiresIn: '7d' });
+  return { token, playerId: user.player_id, username: user.username };
+});
+
+fastify.get('/api/me', async (request, reply) => {
+  const auth = request.headers.authorization;
+  if (!auth || !auth.startsWith('Bearer ')) {
+    return reply.status(401).send({ error: 'Missing token.' });
+  }
+  try {
+    const payload = jwt.verify(auth.slice(7), JWT_SECRET) as { playerId: string; username: string };
+    return { playerId: payload.playerId, username: payload.username };
+  } catch {
+    return reply.status(401).send({ error: 'Invalid token.' });
+  }
 });
 
 function dispatchBattle(
@@ -59,8 +125,23 @@ const start = async () => {
       }
     });
 
+    io.use((socket, next) => {
+      const token = socket.handshake.auth?.token as string | undefined;
+      if (!token) {
+        return next(new Error('Authentication required.'));
+      }
+      try {
+        const payload = jwt.verify(token, JWT_SECRET) as { playerId: string; username: string };
+        (socket as any).authedPlayerId = payload.playerId;
+        (socket as any).authedUsername = payload.username;
+        next();
+      } catch {
+        next(new Error('Invalid or expired token.'));
+      }
+    });
+
     io.on('connection', async (socket) => {
-      const pid = (socket.handshake.query.playerId as string) || socket.id;
+      const pid = (socket as any).authedPlayerId as string;
       console.log(`Client connected: ${socket.id} (Player ID: ${pid})`);
 
       playerSockets.set(pid, socket);
